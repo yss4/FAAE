@@ -99,10 +99,10 @@ def model_discriminator():
 
 
 def example_aae(path, adversarial_optimizer):
-    # z \in R^100
+
     latent_dim = 256
     units = 512
-    # x \in R^{28x28}
+
     input_shape = dim_ordering_shape((3, 32, 32))
 
     # generator (z -> x)
@@ -114,7 +114,7 @@ def example_aae(path, adversarial_optimizer):
     # discriminator (z -> y)
     discriminator = model_discriminator()
 
-    # build AAE
+    # build FAAE
     zreal = discriminator.inputs[0]
     x = generator.inputs[0]
     z = generator(x)
@@ -128,16 +128,9 @@ def example_aae(path, adversarial_optimizer):
     encoder.summary()
     discriminator.summary()
 
-    
-    #plot_model(generator, to_file='generator.png', show_shapes=True, show_layer_names=False)
-    #plot_model(encoder, to_file = 'encoder.png',show_shapes=True, show_layer_names=False)
-    #plot_model(discriminator, to_file = 'discriminator.png', show_shapes=True, show_layer_names=False)
-
-    #import pdb;pdb.set_trace()
-
-    encoder.load_weights(os.path.join(path, "encoder.h5"))
-    generator.load_weights(os.path.join(path, "generator.h5"))
-    discriminator.load_weights(os.path.join(path, "discriminator.h5"))
+    #encoder.load_weights(os.path.join(path, "encoder.h5"))
+    #generator.load_weights(os.path.join(path, "generator.h5"))
+    #discriminator.load_weights(os.path.join(path, "discriminator.h5"))
     
     # build adversarial model
     generative_params = generator.trainable_weights + encoder.trainable_weights
@@ -173,17 +166,6 @@ def example_aae(path, adversarial_optimizer):
     autoencoder_cb = ImageGridCallback(os.path.join(path, "autoencoded-epoch-{:03d}.png"), autoencoder_sampler,
                                        cmap=None)
     
-    # train network
-    # generator, discriminator; pred, yfake, yreal
-    #n = xtrain.shape[0]
-    #y = [xtrain, np.ones((n, 1)), np.zeros((n, 1)), xtrain, np.zeros((n, 1)), np.ones((n, 1))]
-    #ntest = xtest.shape[0]
-    #ytest = [xtest, np.ones((ntest, 1)), np.zeros((ntest, 1)), xtest, np.zeros((ntest, 1)), np.ones((ntest, 1))]
-    #history = fit(model, x=xtrain, y=y, validation_data=(xtest, ytest),
-    #              callbacks=[generator_cb, autoencoder_cb],
-    #             nb_epoch=100, batch_size=32)
-
-    
     train_datagen = gen_sample(128, 256, False)
     test_datagen = gen_sample(32, 256, True)
     history = model.fit_generator(train_datagen, epochs = 200, steps_per_epoch= 1000, validation_data=test_datagen, validation_steps = 100, callbacks=[generator_cb, autoencoder_cb])
@@ -209,22 +191,6 @@ def gen_sample(batch_size, latent_dim, test):
         noise = np.random.randn(batch_size, latent_dim)
     #    noise = 1/(1+np.exp(-noise))
         yield [data[random.sample(range(limit), batch_size)], noise], [noise, np.ones((batch_size, 1)), np.zeros((batch_size, 1)), noise, np.zeros((batch_size, 1)), np.ones((batch_size, 1))] 
-
-def gen_sample_new(batch_size, latent_dim, test):
-    directory = 'new'
-    files = os.listdir(directory)    
-    limit = len(files)
-
-    while True:
-        noise = np.array(list(map(lambda x: np.random.normal(size=latent_dim), range(batch_size))))
-        batch_indicies = random.sample(range(limit), batch_size)
-        batch_images = []
-        for i in batch_indices:
-	    filename = os.path.join(directory, files[i])
-	    image = scipy.misc.imread(filename).astype(np.float)
-            image = image.astype(np.float32) / 255.0
-	    batch_images.append(image)
-        yield [batch_images, noise], [noise, np.ones((batch_size, 1)), np.zeros((batch_size, 1)), noise, np.zeros((batch_size, 1)), np.ones((batch_size, 1))]
 
 def main():
     example_aae("output/aae-cifar10", AdversarialOptimizerSimultaneous())
