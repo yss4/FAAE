@@ -98,7 +98,7 @@ def model_discriminator():
     return model
 
 
-def example_aae(path, adversarial_optimizer):
+def example_faae(path, adversarial_optimizer):
 
     latent_dim = 256
     units = 512
@@ -145,15 +145,12 @@ def example_aae(path, adversarial_optimizer):
                                                                        "xpred": 8}}] * 2)
 
     xtrain, xtest = cifar10_data()
-    # callback for image grid of generated samples
     def generator_sampler():
         zsamples = np.random.randn(10 * 10, latent_dim)
-    #    zsamples = 1/(1+np.exp(-zsamples))
         return dim_ordering_unfix(generator.predict(zsamples)).transpose((0, 2, 3, 1)).reshape((10, 10, 32, 32, 3))
 
     generator_cb = ImageGridCallback(os.path.join(path, "generated-epoch-{:03d}.png"), generator_sampler)
 
-    # callback for image grid of autoencoded samples
     def autoencoder_sampler():
         xsamples = n_choice(xtest, 10)
         xrep = np.repeat(xsamples, 9, axis=0)
@@ -169,6 +166,7 @@ def example_aae(path, adversarial_optimizer):
     train_datagen = gen_sample(128, 256, False)
     test_datagen = gen_sample(32, 256, True)
     history = model.fit_generator(train_datagen, epochs = 200, steps_per_epoch= 1000, validation_data=test_datagen, validation_steps = 100, callbacks=[generator_cb, autoencoder_cb])
+    
     # save history
     df = pd.DataFrame(history.history)
     df.to_csv(os.path.join(path, "history.csv"))
